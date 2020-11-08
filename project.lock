@@ -1,0 +1,118 @@
+preprocess:
+  cmd: python -m spacy run preprocess
+  script:
+    - python scripts/data_preprocessing.py assets/
+  deps:
+    - path: scripts/data_preprocessing.py
+      md5: a5e5f2881d9f53203eb41269f98f3996
+  outs:
+    - path: corpus/training_set.spacy
+      md5: null
+    - path: corpus/validation_set.spacy
+      md5: null
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
+convert:
+  cmd: python -m spacy run convert
+  script:
+    - python scripts/dataset_conversion.py -i assets/training_set.tsv -o corpus/training_set.spacy
+      -c assets/categories.json
+    - python scripts/dataset_conversion.py -i assets/validation_set.tsv -o corpus/validation_set.spacy
+      -c assets/categories.json
+    - python scripts/dataset_conversion.py -i assets/test_set.tsv -o corpus/test_set.spacy
+      -c assets/categories.json
+  deps:
+    - path: scripts/dataset_conversion.py
+      md5: 35c8e8ccd8c6e8fdb08260b876de3539
+  outs:
+    - path: corpus/training_set.spacy
+      md5: 83e689c907d87a557112e0aa3f4dea79
+    - path: corpus/validation_set.spacy
+      md5: 92a6e403c4cf78078fee09ec691d3638
+    - path: corpus/test_set.spacy
+      md5: 532de1d42ad90b8a214382e5a4e19b76
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
+init:
+  cmd: python -m spacy run init
+  script:
+    - python -m spacy init config config.cfg --lang en --pipeline tagger,parser,ner,textcat
+      --optimize efficiency --cpu
+    - python scripts/move_file.py -i ./config.cfg -o ./configs/
+  deps:
+    - path: scripts/move_file.py
+      md5: 78c13172b87c66c481571f2aed6dfdeb
+  outs:
+    - path: configs/configs.cfg
+      md5: null
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
+download:
+  cmd: python -m spacy run download
+  script:
+    - python -m spacy project assets -S
+    - python scripts/split_dataset.py -i ./assets/ -o ./assets/
+  deps: []
+  outs:
+    - path: assets/training_set.tsv
+      md5: b826f5538da9eaa0b945b82fca05a92f
+    - path: assets/validation_set.tsv
+      md5: 0006050ae92228b0d0244d1815785d8c
+    - path: assets/test_set.tsv
+      md5: 8619616e1960bfd2650cc21ede746daa
+    - path: assets/categories.json
+      md5: 7adb4a5f6584b206b185d9351542e7b7
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
+train:
+  cmd: python -m spacy run train
+  script:
+    - python -m spacy train configs/config.cfg --output training/ --paths.train corpus/training_set.spacy
+      --paths.dev corpus/validation_set.spacy
+  deps:
+    - path: corpus/training_set.spacy
+      md5: 83e689c907d87a557112e0aa3f4dea79
+    - path: corpus/validation_set.spacy
+      md5: 92a6e403c4cf78078fee09ec691d3638
+    - path: corpus/test_set.spacy
+      md5: 532de1d42ad90b8a214382e5a4e19b76
+    - path: configs/config.cfg
+      md5: ad46dfa16e029beb750e3c4ef50ba76d
+  outs:
+    - path: training/model-best
+      md5: 3cccf17b431d3449c95a75a017d576d3
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
+evaluate:
+  cmd: python -m spacy run evaluate
+  script:
+    - python -m spacy evaluate ./training/model-best ./corpus/training_set.spacy --output
+      ./metrics/training_set_results.json
+    - python -m spacy evaluate ./training/model-best ./corpus/validation_set.spacy
+      --output ./metrics/validation_set_results.json
+  deps:
+    - path: training/model-last
+      md5: 3cccf17b431d3449c95a75a017d576d3
+    - path: training/model-best
+      md5: 3cccf17b431d3449c95a75a017d576d3
+    - path: corpus/training_set.spacy
+      md5: 83e689c907d87a557112e0aa3f4dea79
+    - path: corpus/validation_set.spacy
+      md5: 92a6e403c4cf78078fee09ec691d3638
+  outs:
+    - path: metrics/training_set_results.json
+      md5: 6d1fb63e24b6559ecee60ef7a3abd684
+    - path: metrics/validation_set_results.json
+      md5: 75ab8e646332b682c501e057271bfef9
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
+use:
+  cmd: python -m spacy run use
+  script:
+    - python scripts/use_model.py -m ./training/model-best
+  deps:
+    - path: training/model-best
+      md5: 3cccf17b431d3449c95a75a017d576d3
+  outs: []
+  spacy_version: 3.0.0rc2
+  spacy_git_version: ace6ae435
